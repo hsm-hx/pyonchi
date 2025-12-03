@@ -34,15 +34,15 @@ func IsInExpenseConversation(key string) bool {
 }
 
 const (
-	StepInputTitle           = 100
-	StepGetTitle             = 101
-	StepInputCategory        = 200
-	StepGetCategory          = 201
-	StepInputAmountPerPerson = 300
-	StepGetAmountPerPerson   = 301
-	StepInputPeople          = 400
-	StepGetPeople            = 401
-	StepSelectWallet         = 500
+	StepInputTitle                 = 100
+	StepGetTitleAndRequestCategory = 101
+	StepInputCategory              = 200
+	StepGetCategory                = 201
+	StepInputAmountPerPerson       = 300
+	StepGetAmountPerPerson         = 301
+	StepInputPeople                = 400
+	StepGetPeople                  = 401
+	StepSelectWallet               = 500
 )
 
 func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -58,35 +58,21 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 	switch state.Step {
 	case StepInputTitle:
 		RequestInputTitle(s, m)
-		state.Step = StepGetTitle
+		state.Step = StepGetTitleAndRequestCategory
 		return
-	case StepGetTitle:
+	case StepGetTitleAndRequestCategory:
 		title := GetInputTitle(m)
 		if title == "" {
 			s.ChannelMessageSend(m.ChannelID, "⚠️ タイトル教えてよ")
 			return
 		}
 		state.Title = title
-		state.Step = StepInputCategory
-		return
-	case StepInputCategory:
+
 		RequestInputCategory(s, m)
-		state.Step = StepGetCategory
-		return
-	case StepGetCategory:
-		category := GetInputCategory(m)
-		if category == "" {
-			s.ChannelMessageSend(m.ChannelID, "⚠️ カテゴリ教えてよ")
-			return
-		}
-		state.Category = category
 		state.Step = StepInputAmountPerPerson
 		return
 	case StepInputAmountPerPerson:
 		RequestInputAmountPerPerson(s, m, state.Category)
-		state.Step = StepGetAmountPerPerson
-		return
-	case StepGetAmountPerPerson:
 		amt, err := strconv.Atoi(m.Content)
 		if err != nil || amt <= 0 {
 			s.ChannelMessageSend(m.ChannelID, "⚠️ 金額は整数にしてよね")
@@ -95,14 +81,12 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		state.Amount = amt
 
 		if state.Category == "ぜいたくごはん" {
-			state.Step = StepInputPeople
+			s.ChannelMessageSend(m.ChannelID, "何人分支払ったの？")
+			state.Step = StepGetPeople
 		} else {
 			state.People = 1
-			state.Step = StepSelectWallet
+			RequestInputWallet(s, m)
 		}
-		return
-	case StepInputPeople:
-		s.ChannelMessageSend(m.ChannelID, "何人分支払ったの？")
 		return
 	case StepGetPeople:
 		people, err := GetInputPeople(m)
@@ -111,9 +95,6 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 		state.People = people
-		state.Step = StepSelectWallet
-		return
-	case StepSelectWallet:
 		RequestInputWallet(s, m)
 		return
 	default:
