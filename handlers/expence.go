@@ -33,27 +33,27 @@ func IsInExpenseConversation(key string) bool {
 	return exists
 }
 
+const (
+	StepInputTitle           = 100
+	StepGetTitle             = 101
+	StepInputCategory        = 200
+	StepGetCategory          = 201
+	StepInputAmountPerPerson = 300
+	StepGetAmountPerPerson   = 301
+	StepInputPeople          = 400
+	StepGetPeople            = 401
+	StepSelectWallet         = 500
+)
+
 func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 	key := m.ChannelID + "|" + m.Author.ID
 	state, ok := expenseConversationState[key]
 	if !ok {
 		state = &ExpenceState{
-			Step: 1,
+			Step: StepInputTitle,
 		}
 		expenseConversationState[key] = state
 	}
-
-	const (
-		StepInputTitle           = 100
-		StepGetTitle             = 101
-		StepInputCategory        = 200
-		StepGetCategory          = 201
-		StepInputAmountPerPerson = 300
-		StepGetAmountPerPerson   = 301
-		StepInputPeople          = 400
-		StepGetPeople            = 401
-		StepSelectWallet         = 500
-	)
 
 	switch state.Step {
 	case StepInputTitle:
