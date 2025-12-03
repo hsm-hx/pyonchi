@@ -59,6 +59,7 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 	case StepInputTitle:
 		RequestInputTitle(s, m)
 		state.Step = StepGetTitle
+		return
 	case StepGetTitle:
 		title := GetInputTitle(m)
 		if title == "" {
@@ -67,9 +68,11 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		state.Title = title
 		state.Step = StepInputCategory
+		return
 	case StepInputCategory:
 		RequestInputCategory(s, m)
 		state.Step = StepGetCategory
+		return
 	case StepGetCategory:
 		category := GetInputCategory(m)
 		if category == "" {
@@ -78,13 +81,11 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		state.Category = category
 		state.Step = StepInputAmountPerPerson
+		return
 	case StepInputAmountPerPerson:
-		if state.Category == "ぜいたくごはん" {
-			s.ChannelMessageSend(m.ChannelID, "一人あたりの金額はいくら？")
-		} else {
-			s.ChannelMessageSend(m.ChannelID, "金額はいくら？")
-		}
+		RequestInputAmountPerPerson(s, m, state.Category)
 		state.Step = StepGetAmountPerPerson
+		return
 	case StepGetAmountPerPerson:
 		amt, err := strconv.Atoi(m.Content)
 		if err != nil || amt <= 0 {
@@ -99,8 +100,10 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 			state.People = 1
 			state.Step = StepSelectWallet
 		}
+		return
 	case StepInputPeople:
 		s.ChannelMessageSend(m.ChannelID, "何人分支払ったの？")
+		return
 	case StepGetPeople:
 		people, err := GetInputPeople(m)
 		if err != nil || people <= 0 {
@@ -109,11 +112,14 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		state.People = people
 		state.Step = StepSelectWallet
+		return
 	case StepSelectWallet:
 		RequestInputWallet(s, m)
+		return
 	default:
 		s.ChannelMessageSend(m.ChannelID, "⚠️ なんか変な状態になっちゃった")
 		delete(expenseConversationState, key)
+		return
 	}
 }
 
@@ -154,6 +160,14 @@ func RequestInputCategory(s *discordgo.Session, m *discordgo.MessageCreate) {
 			},
 		},
 	})
+}
+
+func RequestInputAmountPerPerson(s *discordgo.Session, m *discordgo.MessageCreate, category string) {
+	if category == "ぜいたくごはん" {
+		s.ChannelMessageSend(m.ChannelID, "一人あたりの金額はいくら？")
+	} else {
+		s.ChannelMessageSend(m.ChannelID, "金額はいくら？")
+	}
 }
 
 func RequestInputWallet(s *discordgo.Session, m *discordgo.MessageCreate) {
