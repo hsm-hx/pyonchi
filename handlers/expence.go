@@ -72,7 +72,6 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		state.Step = StepInputAmountPerPerson
 		return
 	case StepInputAmountPerPerson:
-		RequestInputAmountPerPerson(s, m, state.Category)
 		amt, err := strconv.Atoi(m.Content)
 		if err != nil || amt <= 0 {
 			s.ChannelMessageSend(m.ChannelID, "⚠️ 金額は整数にしてよね")
@@ -141,14 +140,6 @@ func RequestInputCategory(s *discordgo.Session, m *discordgo.MessageCreate) {
 			},
 		},
 	})
-}
-
-func RequestInputAmountPerPerson(s *discordgo.Session, m *discordgo.MessageCreate, category string) {
-	if category == "ぜいたくごはん" {
-		s.ChannelMessageSend(m.ChannelID, "一人あたりの金額はいくら？")
-	} else {
-		s.ChannelMessageSend(m.ChannelID, "金額はいくら？")
-	}
 }
 
 func RequestInputWallet(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -260,12 +251,18 @@ func CategoryInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCr
 
 		// カテゴリ保存して次のステップへ
 		state.Category = category
-		state.Step = 4
+		state.Step = StepInputAmountPerPerson
 
+		var msg string
+		if category == "ぜいたくごはん" {
+			msg = "一人あたりの金額はいくら？"
+		} else {
+			msg = "金額はいくら？"
+		}
 		resp := &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "一人あたりの金額はいくら？",
+				Content: msg,
 			},
 		}
 		if err := s.InteractionRespond(i.Interaction, resp); err != nil {
