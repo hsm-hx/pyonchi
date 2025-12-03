@@ -111,6 +111,9 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		state.Step = StepSelectWallet
 	case StepSelectWallet:
 		RequestInputWallet(s, m)
+	default:
+		s.ChannelMessageSend(m.ChannelID, "⚠️ なんか変な状態になっちゃった")
+		delete(expenseConversationState, key)
 	}
 }
 
