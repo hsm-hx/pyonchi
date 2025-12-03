@@ -15,13 +15,13 @@ type SplitState struct {
 
 var splitConversationState = map[string]*SplitState{}
 
-// 🔍 会話中かどうかを判定
+// 会話中かどうかを判定
 func IsInSplitConversation(key string) bool {
 	_, exists := splitConversationState[key]
 	return exists
 }
 
-// 🧠 会話の続きメッセージを処理
+// 会話の続きメッセージを処理
 func SplitHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 	key := m.ChannelID + "|" + m.Author.ID
 	state, ok := splitConversationState[key]

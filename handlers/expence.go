@@ -12,12 +12,12 @@ import (
 )
 
 type ExpenceState struct {
-	Step     int    // 1 = タイトル, 2 = カテゴリ, 3 = 一人あたり金額, 4 = 人数, 5 = 財布
-	Title    string // タイトル
-	Category string // カテゴリ
-	Amount   int    // 一人あたりの金額
-	People   int    // 人数
-	Wallet   string // 財布
+	Step     int
+	Title    string
+	Category string
+	Amount   int
+	People   int
+	Wallet   string
 }
 
 var expenseConversationState = map[string]*ExpenceState{}
