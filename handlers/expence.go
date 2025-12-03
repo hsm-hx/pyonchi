@@ -43,117 +43,73 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		expenseConversationState[key] = state
 	}
 
-	switch state.Step {
+	const (
+		StepInputTitle           = 100
+		StepGetTitle             = 101
+		StepInputCategory        = 200
+		StepGetCategory          = 201
+		StepInputAmountPerPerson = 300
+		StepGetAmountPerPerson   = 301
+		StepInputPeople          = 400
+		StepGetPeople            = 401
+		StepSelectWallet         = 500
+	)
 
-	// --- Step 1: タイトル入力 ---
-	case 1:
-		state.Step = 2
-		s.ChannelMessageSend(m.ChannelID, "タイトル教えて")
-	// --- Step 2: タイトル取得 & カテゴリ入力 ---
-	case 2:
-		title := m.Content
+	switch state.Step {
+	case StepInputTitle:
+		RequestInputTitle(s, m)
+		state.Step = StepGetTitle
+	case StepGetTitle:
+		title := GetInputTitle(m)
 		if title == "" {
 			s.ChannelMessageSend(m.ChannelID, "⚠️ タイトル教えてよ")
 			return
 		}
-		// タイトル保存して次のステップへ
 		state.Title = title
-		state.Step = 3
-
-		s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Content: "どんな出費？",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.SelectMenu{
-							MenuType: discordgo.StringSelectMenu,
-							CustomID: "expense_category_select",
-							Options: []discordgo.SelectMenuOption{
-								{
-									Label: "いつもごはん",
-									Value: "いつもごはん",
-								},
-								{
-									Label: "ぜいたくごはん",
-									Value: "ぜいたくごはん",
-								},
-								{
-									Label: "消耗品費",
-									Value: "消耗品費",
-								},
-								{
-									Label: "その他",
-									Value: "その他",
-								},
-							},
-							Placeholder: "支出カテゴリを選んでよね",
-						},
-					},
-				},
-			},
-		})
-	// --- カテゴリ取得 ---
-	case 3:
-		category := m.Content
+		state.Step = StepInputCategory
+	case StepInputCategory:
+		RequestInputCategory(s, m)
+		state.Step = StepGetCategory
+	case StepGetCategory:
+		category := GetInputCategory(m)
 		if category == "" {
 			s.ChannelMessageSend(m.ChannelID, "⚠️ カテゴリ教えてよ")
 			return
 		}
-		// カテゴリ保存して次のステップへ
 		state.Category = category
-	// --- Step 4: 一人あたりの金額 ---
-	case 4:
+		state.Step = StepInputAmountPerPerson
+	case StepInputAmountPerPerson:
+		if state.Category == "ぜいたくごはん" {
+			s.ChannelMessageSend(m.ChannelID, "一人あたりの金額はいくら？")
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "金額はいくら？")
+		}
+		state.Step = StepGetAmountPerPerson
+	case StepGetAmountPerPerson:
 		amt, err := strconv.Atoi(m.Content)
 		if err != nil || amt <= 0 {
-			s.ChannelMessageSend(m.ChannelID, "⚠️ 一人あたりの金額は整数にしてよね")
+			s.ChannelMessageSend(m.ChannelID, "⚠️ 金額は整数にしてよね")
 			return
 		}
 		state.Amount = amt
-		state.Step = 5
 
 		if state.Category == "ぜいたくごはん" {
-			s.ChannelMessageSend(m.ChannelID, "何人分支払ったの？")
+			state.Step = StepInputPeople
 		} else {
 			state.People = 1
-			s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-				Content: "どの財布から払ったの？",
-				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.SelectMenu{
-								MenuType: discordgo.StringSelectMenu,
-								CustomID: "expense_wallet_select",
-								Options: []discordgo.SelectMenuOption{
-									{
-										Label: "おひ財布",
-										Value: "おひ財布",
-									},
-									{
-										Label: "ぽよ財布",
-										Value: "ぽよ財布",
-									},
-									{
-										Label: "B/43",
-										Value: "B/43",
-									},
-								},
-								Placeholder: "支払い財布を選んでよね",
-							},
-						},
-					},
-				},
-			})
+			state.Step = StepSelectWallet
 		}
-	// --- Step 5: 人数 ---
-	case 5:
-		ppl, err := strconv.Atoi(m.Content)
-		if err != nil || ppl <= 0 {
+	case StepInputPeople:
+		s.ChannelMessageSend(m.ChannelID, "何人分支払ったの？")
+	case StepGetPeople:
+		people, err := GetInputPeople(m)
+		if err != nil || people <= 0 {
 			s.ChannelMessageSend(m.ChannelID, "⚠️ 人数が変じゃない？")
 			return
 		}
-		state.People = ppl
-		state.Step = 5
-
+		state.People = people
+		state.Step = StepSelectWallet
+	case StepSelectWallet:
 		s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 			Content: "どの財布から払ったの？",
 			Components: []discordgo.MessageComponent{
@@ -164,19 +120,16 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 							CustomID: "expense_wallet_select",
 							Options: []discordgo.SelectMenuOption{
 								{
-									Label:       "おひ財布",
-									Description: "おひ財布から支払った",
-									Value:       "おひ財布",
+									Label: "おひ財布",
+									Value: "おひ財布",
 								},
 								{
-									Label:       "ぽよ財布",
-									Description: "ぽよ財布から支払った",
-									Value:       "ぽよ財布",
+									Label: "ぽよ財布",
+									Value: "ぽよ財布",
 								},
 								{
-									Label:       "B/43",
-									Description: "B/43から支払った",
-									Value:       "B/43",
+									Label: "B/43",
+									Value: "B/43",
 								},
 							},
 							Placeholder: "支払い財布を選んでよね",
@@ -186,6 +139,63 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 			},
 		})
 	}
+}
+
+func RequestInputTitle(s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSend(m.ChannelID, "タイトル教えて")
+}
+
+func RequestInputCategory(s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content: "どんな出費？",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.SelectMenu{
+						MenuType: discordgo.StringSelectMenu,
+						CustomID: "expense_category_select",
+						Options: []discordgo.SelectMenuOption{
+							{
+								Label: "いつもごはん",
+								Value: "いつもごはん",
+							},
+							{
+								Label: "ぜいたくごはん",
+								Value: "ぜいたくごはん",
+							},
+							{
+								Label: "消耗品費",
+								Value: "消耗品費",
+							},
+							{
+								Label: "その他",
+								Value: "その他",
+							},
+						},
+						Placeholder: "支出カテゴリを選んでよね",
+					},
+				},
+			},
+		},
+	})
+}
+
+func GetInputTitle(m *discordgo.MessageCreate) string {
+	title := m.Content
+	return title
+}
+
+func GetInputCategory(m *discordgo.MessageCreate) string {
+	category := m.Content
+	return category
+}
+
+func GetInputPeople(m *discordgo.MessageCreate) (int, error) {
+	ppl, err := strconv.Atoi(m.Content)
+	if err != nil {
+		return 0, err
+	}
+	return ppl, nil
 }
 
 // --- 財布を選択するプルダウンのインタラクションをハンドリングする関数 ---
@@ -237,21 +247,6 @@ func WalletInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 }
 
-func getBudgetText(s *discordgo.Session, i *discordgo.InteractionCreate, category string) string {
-	var monthTotal int
-	var err error
-
-	// 今月の外食合計を取得
-	monthTotal, err = client.GetMonthlyExpenseTotal(category)
-	if err != nil {
-		s.ChannelMessageSend(i.ChannelID, "⚠️ 今月の"+category+"代が取得できなかったんだけど")
-		delete(expenseConversationState, i.ChannelID+"|"+i.Member.User.ID)
-		return ""
-	}
-
-	return "📊 今月の" + category + "合計は **" + strconv.Itoa(monthTotal) + "円** みたい"
-}
-
 func CategoryInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.MessageComponentData().CustomID == "expense_category_select" {
 		// ここで選択されたカテゴリの値を取得
@@ -275,4 +270,19 @@ func CategoryInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCr
 			log.Fatalln(err)
 		}
 	}
+}
+
+func getBudgetText(s *discordgo.Session, i *discordgo.InteractionCreate, category string) string {
+	var monthTotal int
+	var err error
+
+	// 今月の外食合計を取得
+	monthTotal, err = client.GetMonthlyExpenseTotal(category)
+	if err != nil {
+		s.ChannelMessageSend(i.ChannelID, "⚠️ 今月の"+category+"代が取得できなかったんだけど")
+		delete(expenseConversationState, i.ChannelID+"|"+i.Member.User.ID)
+		return ""
+	}
+
+	return "📊 今月の" + category + "合計は **" + strconv.Itoa(monthTotal) + "円** みたい"
 }
