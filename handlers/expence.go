@@ -23,12 +23,11 @@ type ExpenceState struct {
 var expenseConversationState = map[string]*ExpenceState{}
 var client *notion.Client
 
-// Notion client をセット
 func SetNotionClient(cli *notion.Client) {
 	client = cli
 }
 
-// 🔍 会話中かどうかを判定
+// 会話中かどうかを判定
 func IsInExpenseConversation(key string) bool {
 	_, exists := expenseConversationState[key]
 	return exists

@@ -18,14 +18,13 @@ import (
 )
 
 func main() {
-	// 環境変数チェック
-	token := os.Getenv("DISCORD_TOKEN")
-	if token == "" {
+	discordToken := os.Getenv("DISCORD_TOKEN")
+	if discordToken == "" {
 		log.Fatal("DISCORD_TOKEN を設定してください")
 		return
 	}
 
-	// 許可されたチャンネルID (カンマ区切り)
+	// ぴょんちーが反応できるチャンネルの ID (カンマ区切り)
 	allowedChannelIDsStr := os.Getenv("ALLOWED_CHANNEL_IDS")
 	var allowedChannelIDs []string
 	if allowedChannelIDsStr != "" {
@@ -36,7 +35,6 @@ func main() {
 		}
 	}
 
-	// Notion 設定は dining handler が使う
 	notionKey := os.Getenv("NOTION_API_KEY")
 	notionDB := os.Getenv("NOTION_EXPENSES_DB_ID")
 	if notionKey == "" || notionDB == "" {
@@ -48,8 +46,8 @@ func main() {
 	notionClient := notion.NewClient(notionKey, notionDB)
 	handlers.SetNotionClient(notionClient)
 
-	// Discord Bot (gateway)
-	dg, err := discordgo.New("Bot " + token)
+	// Discord Bot
+	dg, err := discordgo.New("Bot " + discordToken)
 	if err != nil {
 		log.Fatalf("discordgo.New error: %v", err)
 		return
