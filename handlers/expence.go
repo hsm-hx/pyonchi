@@ -110,34 +110,7 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		state.People = people
 		state.Step = StepSelectWallet
 	case StepSelectWallet:
-		s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Content: "どの財布から払ったの？",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.SelectMenu{
-							MenuType: discordgo.StringSelectMenu,
-							CustomID: "expense_wallet_select",
-							Options: []discordgo.SelectMenuOption{
-								{
-									Label: "おひ財布",
-									Value: "おひ財布",
-								},
-								{
-									Label: "ぽよ財布",
-									Value: "ぽよ財布",
-								},
-								{
-									Label: "B/43",
-									Value: "B/43",
-								},
-							},
-							Placeholder: "支払い財布を選んでよね",
-						},
-					},
-				},
-			},
-		})
+		RequestInputWallet(s, m)
 	}
 }
 
@@ -173,6 +146,37 @@ func RequestInputCategory(s *discordgo.Session, m *discordgo.MessageCreate) {
 							},
 						},
 						Placeholder: "支出カテゴリを選んでよね",
+					},
+				},
+			},
+		},
+	})
+}
+
+func RequestInputWallet(s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content: "どの財布から払ったの？",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.SelectMenu{
+						MenuType: discordgo.StringSelectMenu,
+						CustomID: "expense_wallet_select",
+						Options: []discordgo.SelectMenuOption{
+							{
+								Label: "おひ財布",
+								Value: "おひ財布",
+							},
+							{
+								Label: "ぽよ財布",
+								Value: "ぽよ財布",
+							},
+							{
+								Label: "B/43",
+								Value: "B/43",
+							},
+						},
+						Placeholder: "支払い財布を選んでよね",
 					},
 				},
 			},
