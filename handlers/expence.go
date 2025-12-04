@@ -367,7 +367,7 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 
 		// 各カテゴリごとに Notion に記録
 		for _, item := range categoryTotals {
-			title := state.Merchant + " - " + item.Name
+			title := item.Name
 			amount := int(item.Amount)
 			people := 1
 			category := item.Category
