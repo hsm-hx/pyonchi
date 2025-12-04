@@ -305,6 +305,8 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 		wallet := i.MessageComponentData().Values[0]
 
 		state := expenseReceiptConversationState[i.ChannelID+"|"+i.Member.User.ID]
+		fmt.Println(i.ChannelID, i.Member.User.ID)
+		fmt.Println(expenseReceiptConversationState)
 
 		for _, item := range state.Items {
 			title := state.Merchant + " - " + item.Name
