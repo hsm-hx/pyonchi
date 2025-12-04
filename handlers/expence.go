@@ -152,7 +152,7 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 	defer os.Remove(imagePath)
 
 	// 解析結果をもとに Notion に記録
-	state = &ReceiptData{
+	expenseReceiptConversationState[key] = &ReceiptData{
 		Merchant: receiptData.Merchant,
 		Items:    receiptData.Items,
 		Date:     receiptData.Date,
