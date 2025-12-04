@@ -12,12 +12,24 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 
 	"pyonchi/handlers"
 	"pyonchi/notion"
 )
 
 func main() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Error loading env target")
+	}
+
+	geminiToken := os.Getenv("GEMINI_API_KEY")
+	if geminiToken == "" {
+		log.Println("GEMINI_API_KEY を設定してください")
+		return
+	}
+
 	discordToken := os.Getenv("DISCORD_TOKEN")
 	if discordToken == "" {
 		log.Fatal("DISCORD_TOKEN を設定してください")
