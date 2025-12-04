@@ -3,11 +3,11 @@ package handlers
 import (
 	"github.com/bwmarrin/discordgo"
 
+	"pyonchi/gemini"
 	"pyonchi/internal/convo"
 )
 
-func RouteOngoingConversations(s *discordgo.Session, m *discordgo.MessageCreate) bool {
-
+func RouteOngoingConversations(s *discordgo.Session, m *discordgo.MessageCreate, geminiClient *gemini.Client) bool {
 	key := convo.Key(m.ChannelID, m.Author.ID)
 
 	// 割り勘ボットの ongoing state?
@@ -24,7 +24,7 @@ func RouteOngoingConversations(s *discordgo.Session, m *discordgo.MessageCreate)
 
 	// レシート画像ボットの ongoing state?
 	if IsInExpenseReceiptConversation(key) {
-		ExpenseReceiptHandleOngoing(s, m)
+		ExpenseReceiptHandleOngoing(s, m, geminiClient)
 		return true
 	}
 

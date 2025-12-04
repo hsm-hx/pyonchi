@@ -2,12 +2,16 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 
+	"pyonchi/gemini"
 	"pyonchi/notion"
 )
 
@@ -19,9 +23,15 @@ type ExpenceState struct {
 	People   int
 	Wallet   string
 }
+type ReceiptData struct {
+	Merchant string
+	Items    []gemini.Item
+	Date     string
+}
 
 var expenseConversationState = map[string]*ExpenceState{}
-var expenseReceiptConversationState = map[string]*ExpenceState{}
+var expenseReceiptConversationState = map[string]*ReceiptData{}
+
 var client *notion.Client
 
 func SetNotionClient(cli *notion.Client) {
@@ -50,6 +60,7 @@ const (
 	StepInputPeople                = 400
 	StepGetPeople                  = 401
 	StepSelectWallet               = 500
+	StepGetReceiptData             = 600
 )
 
 func ExpenseManualHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -111,8 +122,43 @@ func ExpenseManualHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate
 }
 
 // レシート画像から家計簿記録を行うハンドラ
-func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// 実装は後で
+func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate, geminiClient *gemini.Client) {
+	key := m.ChannelID + "|" + m.Author.ID
+	state, ok := expenseReceiptConversationState[key]
+	if !ok {
+		expenseReceiptConversationState[key] = state
+	}
+
+	// 受け取ったレシート画像を処理してデータを取得
+	// 画像添付の最初のものを使う
+	imageURL := m.Attachments[0].URL
+
+	// 画像を一時ファイルにダウンロード
+	imagePath, err := downloadImageToTempFile(imageURL)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "⚠️ 画像のダウンロードに失敗したよ")
+		delete(expenseReceiptConversationState, key)
+		return
+	}
+	defer os.Remove(imagePath)
+
+	// Gemini API を使ってレシートデータを取得
+	receiptData, err := geminiClient.GetReceiptData(imagePath)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "⚠️ レシートの解析に失敗したよ")
+		delete(expenseReceiptConversationState, key)
+		return
+	}
+	defer os.Remove(imagePath)
+
+	// 解析結果をもとに Notion に記録
+	state = &ReceiptData{
+		Merchant: receiptData.Merchant,
+		Items:    receiptData.Items,
+		Date:     receiptData.Date,
+	}
+
+	RequestInputWallet(s, m)
 }
 
 func RequestInputTitle(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -252,6 +298,64 @@ func WalletInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 }
 
+// --- 財布を選択するプルダウンのインタラクションをハンドリングする関数 ---
+func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if i.MessageComponentData().CustomID == "expense_receipt_wallet_select" {
+		// ここで選択された財布の値を取得
+		wallet := i.MessageComponentData().Values[0]
+
+		state := expenseReceiptConversationState[i.ChannelID+"|"+i.Member.User.ID]
+
+		for _, item := range state.Items {
+			title := state.Merchant + " - " + item.Name
+			amount := int(item.Amount)
+			people := 1
+			category := item.Category
+
+			dateTime, err := time.Parse("2006-01-02", state.Date)
+			if err != nil {
+				s.ChannelMessageSend(i.ChannelID, "⚠️ 日付の解析に失敗したよ")
+				delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
+				return
+			}
+
+			// Notion に書き込み
+			err = client.CreateExpenseRecord(title, category, amount, people, wallet, dateTime)
+
+			if err != nil {
+				s.ChannelMessageSend(i.ChannelID, "⚠️ Notion に記録できなかった")
+				delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
+				return
+			}
+
+			budgets := getBudgetText(s, i, category)
+
+			// 結果を Discord に送信
+			msg := "🍽 家計簿つけたよ\n" +
+				"タイトル: " + title + "\n" +
+				"一人あたり: " + strconv.Itoa(amount) + "円\n" +
+				"人数: " + strconv.Itoa(people) + "人\n" +
+				"合計: " + strconv.Itoa(amount*people) + "円\n" +
+				"財布: " + wallet + "\n\n" +
+				budgets
+
+			resp := &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   discordgo.MessageFlagsHasThread,
+					Content: msg,
+				},
+			}
+			if err := s.InteractionRespond(i.Interaction, resp); err != nil {
+				log.Fatalln(err)
+			}
+		}
+
+		// 🔚 会話終了
+		delete(expenseConversationState, i.ChannelID+"|"+i.Member.User.ID)
+	}
+}
+
 func CategoryInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.MessageComponentData().CustomID == "expense_category_select" {
 		// ここで選択されたカテゴリの値を取得
@@ -296,4 +400,25 @@ func getBudgetText(s *discordgo.Session, i *discordgo.InteractionCreate, categor
 	}
 
 	return "📊 今月の" + category + "合計は **" + strconv.Itoa(monthTotal) + "円** みたい"
+}
+
+func downloadImageToTempFile(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	tmpFile, err := os.CreateTemp("", "receipt_*.jpg")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+
+	_, err = io.Copy(tmpFile, resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
 }

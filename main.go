@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 
+	"pyonchi/gemini"
 	"pyonchi/handlers"
 	"pyonchi/notion"
 )
@@ -29,6 +30,7 @@ func main() {
 		log.Println("GEMINI_API_KEY を設定してください")
 		return
 	}
+	geminiClient := gemini.NewClient(geminiToken)
 
 	discordToken := os.Getenv("DISCORD_TOKEN")
 	if discordToken == "" {
@@ -96,12 +98,12 @@ func main() {
 
 		// レシート画像トリガー
 		if isExpenseReceiptTrigger(m) {
-			handlers.ExpenseReceiptHandleOngoing(s, m)
+			handlers.ExpenseReceiptHandleOngoing(s, m, geminiClient)
 			return
 		}
 
 		// 進行中の会話があれば各ハンドラが処理する
-		handlers.RouteOngoingConversations(s, m)
+		handlers.RouteOngoingConversations(s, m, geminiClient)
 	})
 
 	dg.AddHandler(handlers.WalletInteractionHandler)
