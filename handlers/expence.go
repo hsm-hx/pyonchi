@@ -345,7 +345,28 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 		fmt.Println(i.ChannelID, i.Member.User.ID)
 		fmt.Println(expenseReceiptConversationState)
 
+		// レシートの各アイテムをカテゴリごとに集計
+		var categoryItems = make(map[string][]gemini.Item)
 		for _, item := range state.Items {
+			categoryItems[item.Category] = append(categoryItems[item.Category], item)
+		}
+
+		// カテゴリごとに記録単位を作成
+		var categoryTotals = make(map[string]gemini.Item)
+		for category, items := range categoryItems {
+			var totalAmount int
+			for _, item := range items {
+				totalAmount += item.Amount
+			}
+			categoryTotals[category] = gemini.Item{
+				Name:     state.Merchant + " - " + category,
+				Amount:   totalAmount,
+				Category: category,
+			}
+		}
+
+		// 各カテゴリごとに Notion に記録
+		for _, item := range categoryTotals {
 			title := state.Merchant + " - " + item.Name
 			amount := int(item.Amount)
 			people := 1

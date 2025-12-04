@@ -24,10 +24,10 @@ type ReceiptDataResponse struct {
 }
 
 type Item struct {
-	Name     string  `json:"name"`
-	Category string  `json:"category"`
-	Amount   float64 `json:"amount"`
-	Date     string  `json:"date"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Amount   int    `json:"amount"`
+	Date     string `json:"date"`
 }
 
 func NewClient(apiKey string) *Client {
