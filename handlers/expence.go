@@ -124,9 +124,13 @@ func ExpenseManualHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate
 // レシート画像から家計簿記録を行うハンドラ
 func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate, geminiClient *gemini.Client) {
 	key := m.ChannelID + "|" + m.Author.ID
-	state, ok := expenseReceiptConversationState[key]
+	_, ok := expenseReceiptConversationState[key]
 	if !ok {
-		expenseReceiptConversationState[key] = state
+		expenseReceiptConversationState[key] = &ReceiptData{
+			Merchant: "",
+			Items:    nil,
+			Date:     "",
+		}
 	}
 
 	// 受け取ったレシート画像を処理してデータを取得
@@ -151,7 +155,7 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 	}
 	defer os.Remove(imagePath)
 
-	// 解析結果をもとに Notion に記録
+	// 解析結果をもとに map に保存
 	expenseReceiptConversationState[key] = &ReceiptData{
 		Merchant: receiptData.Merchant,
 		Items:    receiptData.Items,
