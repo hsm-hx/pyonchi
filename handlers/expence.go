@@ -335,7 +335,9 @@ func WalletInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 
 // --- 財布を選択するプルダウンのインタラクションをハンドリングする関数 ---
 func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	fmt.Println("ReceiptWalletInteractionHandler called")
 	if i.MessageComponentData().CustomID == "expense_receipt_wallet_select" {
+		fmt.Println("Processing receipt wallet selection")
 		// ここで選択された財布の値を取得
 		wallet := i.MessageComponentData().Values[0]
 
