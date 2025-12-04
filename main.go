@@ -165,11 +165,7 @@ func isExpenseManualTrigger(content string) bool {
 
 func isExpenseReceiptTrigger(m *discordgo.MessageCreate) bool {
 	// メッセージに画像添付があるか
-	if len(m.Attachments) == 0 {
-		return false
-	}
-	c := normalize(m.Content)
-	return c == "ぴょんちー レシート" || c == "ぴょんちーレシート" || c == "ぴょんちー　レシート"
+	return !(len(m.Attachments) == 0)
 }
 
 func normalize(s string) string {
