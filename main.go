@@ -111,6 +111,7 @@ func main() {
 
 	dg.AddHandler(handlers.WalletInteractionHandler)
 	dg.AddHandler(handlers.CategoryInteractionHandler)
+	dg.AddHandler(handlers.ReceiptWalletInteractionHandler)
 
 	if err := dg.Open(); err != nil {
 		log.Fatalf("Discord Open error: %v", err)
