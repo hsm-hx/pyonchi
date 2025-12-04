@@ -20,9 +20,12 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading env target")
+	// ローカル環境の場合、.env ファイルを読み込む
+	if os.Getenv("ENV") == "local" {
+		err := godotenv.Load(".env")
+		if err != nil {
+			log.Fatalf("Error loading env target")
+		}
 	}
 
 	geminiToken := os.Getenv("GEMINI_API_KEY")
