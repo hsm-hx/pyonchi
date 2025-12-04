@@ -162,7 +162,7 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 		Date:     receiptData.Date,
 	}
 
-	RequestInputWallet(s, m)
+	RequestInputWalletForReceipt(s, m)
 }
 
 func RequestInputTitle(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -213,6 +213,37 @@ func RequestInputWallet(s *discordgo.Session, m *discordgo.MessageCreate) {
 					discordgo.SelectMenu{
 						MenuType: discordgo.StringSelectMenu,
 						CustomID: "expense_wallet_select",
+						Options: []discordgo.SelectMenuOption{
+							{
+								Label: "おひ財布",
+								Value: "おひ財布",
+							},
+							{
+								Label: "ぽよ財布",
+								Value: "ぽよ財布",
+							},
+							{
+								Label: "B/43",
+								Value: "B/43",
+							},
+						},
+						Placeholder: "支払い財布を選んでよね",
+					},
+				},
+			},
+		},
+	})
+}
+
+func RequestInputWalletForReceipt(s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content: "どの財布から払ったの？",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.SelectMenu{
+						MenuType: discordgo.StringSelectMenu,
+						CustomID: "expense_receipt_wallet_select",
 						Options: []discordgo.SelectMenuOption{
 							{
 								Label: "おひ財布",
