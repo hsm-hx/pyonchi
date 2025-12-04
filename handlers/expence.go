@@ -360,7 +360,7 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 				totalAmount += item.Amount
 			}
 			categoryTotals[category] = gemini.Item{
-				Name:     state.Merchant + " - " + category,
+				Name:     state.Merchant,
 				Amount:   totalAmount,
 				Category: category,
 			}
