@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -365,6 +366,7 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 			}
 		}
 
+		var msgs []string
 		// 各カテゴリごとに Notion に記録
 		for _, item := range categoryTotals {
 			title := item.Name
@@ -390,25 +392,27 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 
 			budgets := getBudgetText(s, i, category)
 
-			// 結果を Discord に送信
-			msg := "🍽 家計簿つけたよ\n" +
-				"タイトル: " + title + "\n" +
-				"一人あたり: " + strconv.Itoa(amount) + "円\n" +
-				"人数: " + strconv.Itoa(people) + "人\n" +
-				"合計: " + strconv.Itoa(amount*people) + "円\n" +
-				"財布: " + wallet + "\n\n" +
-				budgets
+			msgs = append(msgs, "🍽 家計簿つけたよ\n"+
+				"タイトル: "+title+"\n"+
+				"一人あたり: "+strconv.Itoa(amount)+"円\n"+
+				"人数: "+strconv.Itoa(people)+"人\n"+
+				"合計: "+strconv.Itoa(amount*people)+"円\n"+
+				"財布: "+wallet+"\n\n"+
+				budgets)
+		}
 
-			resp := &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   discordgo.MessageFlagsHasThread,
-					Content: msg,
-				},
-			}
-			if err := s.InteractionRespond(i.Interaction, resp); err != nil {
-				log.Fatalln(err)
-			}
+		// 結果を Discord に送信
+		msg := strings.Join(msgs, "\n")
+
+		resp := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsHasThread,
+				Content: msg,
+			},
+		}
+		if err := s.InteractionRespond(i.Interaction, resp); err != nil {
+			log.Fatalln(err)
 		}
 
 		// 🔚 会話終了
