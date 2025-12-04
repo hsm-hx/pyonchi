@@ -21,6 +21,7 @@ type ExpenceState struct {
 }
 
 var expenseConversationState = map[string]*ExpenceState{}
+var expenseReceiptConversationState = map[string]*ExpenceState{}
 var client *notion.Client
 
 func SetNotionClient(cli *notion.Client) {
@@ -30,6 +31,12 @@ func SetNotionClient(cli *notion.Client) {
 // 会話中かどうかを判定
 func IsInExpenseConversation(key string) bool {
 	_, exists := expenseConversationState[key]
+	return exists
+}
+
+// レシート画像から家計簿記録を行う会話中かどうかを判定
+func IsInExpenseReceiptConversation(key string) bool {
+	_, exists := expenseReceiptConversationState[key]
 	return exists
 }
 
@@ -45,7 +52,7 @@ const (
 	StepSelectWallet               = 500
 )
 
-func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
+func ExpenseManualHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 	key := m.ChannelID + "|" + m.Author.ID
 	state, ok := expenseConversationState[key]
 	if !ok {
@@ -101,6 +108,11 @@ func ExpenseHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
 		delete(expenseConversationState, key)
 		return
 	}
+}
+
+// レシート画像から家計簿記録を行うハンドラ
+func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// 実装は後で
 }
 
 func RequestInputTitle(s *discordgo.Session, m *discordgo.MessageCreate) {

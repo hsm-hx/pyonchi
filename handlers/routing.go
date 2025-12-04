@@ -18,7 +18,13 @@ func RouteOngoingConversations(s *discordgo.Session, m *discordgo.MessageCreate)
 
 	// 外食ボットの ongoing state?
 	if IsInExpenseConversation(key) {
-		ExpenseHandleOngoing(s, m)
+		ExpenseManualHandleOngoing(s, m)
+		return true
+	}
+
+	// レシート画像ボットの ongoing state?
+	if IsInExpenseReceiptConversation(key) {
+		ExpenseReceiptHandleOngoing(s, m)
 		return true
 	}
 

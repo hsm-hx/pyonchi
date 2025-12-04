@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestExpenseHandleOngoing(t *testing.T) {
-	t.Run("ExpenseHandleOngoing", func(t *testing.T) {
+func TestExpenseManualHandleOngoing(t *testing.T) {
+	t.Run("ExpenseManualHandleOngoing", func(t *testing.T) {
 		// 何かしらのテストを書く
 	})
 }

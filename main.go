@@ -89,8 +89,14 @@ func main() {
 		}
 
 		// 家計簿記録トリガー
-		if isExpenseTrigger(content) {
-			handlers.ExpenseHandleOngoing(s, m)
+		if isExpenseManualTrigger(content) {
+			handlers.ExpenseManualHandleOngoing(s, m)
+			return
+		}
+
+		// レシート画像トリガー
+		if isExpenseReceiptTrigger(m) {
+			handlers.ExpenseReceiptHandleOngoing(s, m)
 			return
 		}
 
@@ -146,9 +152,18 @@ func isSplitTrigger(content string) bool {
 	return c == "ぴょんちー　割り勘" || c == "ぴょんちー 割り勘" || c == "ぴょんちー割り勘"
 }
 
-func isExpenseTrigger(content string) bool {
+func isExpenseManualTrigger(content string) bool {
 	c := normalize(content)
 	return c == "ぴょんちー 家計簿つけて" || c == "ぴょんちー家計簿つけて" || c == "ぴょんちー　家計簿つけて"
+}
+
+func isExpenseReceiptTrigger(m *discordgo.MessageCreate) bool {
+	// メッセージに画像添付があるか
+	if len(m.Attachments) == 0 {
+		return false
+	}
+	c := normalize(m.Content)
+	return c == "ぴょんちー レシート" || c == "ぴょんちーレシート" || c == "ぴょんちー　レシート"
 }
 
 func normalize(s string) string {
