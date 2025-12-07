@@ -132,6 +132,8 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 	bodystr := new(bytes.Buffer)
 	bodystr.ReadFrom(resp.Body)
 
+	fmt.Println("Full API response body:", bodystr.String())
+
 	// 以下の JSON をパースして text フィールドを抽出
 	// {
 	//   "candidates": [
