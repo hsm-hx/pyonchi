@@ -87,6 +87,14 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 
 	base64Image := base64.StdEncoding.EncodeToString(imageData)
 
+	// jpg, png, webp に対応
+	mimeType := "image/jpeg"
+	if strings.HasSuffix(strings.ToLower(imagePath), ".png") {
+		mimeType = "image/png"
+	} else if strings.HasSuffix(strings.ToLower(imagePath), ".webp") {
+		mimeType = "image/webp"
+	}
+
 	requestBody := map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{
@@ -96,7 +104,7 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 					},
 					{
 						"inline_data": map[string]string{
-							"mime_type": "image/jpeg",
+							"mime_type": mimeType,
 							"data":      base64Image,
 						},
 					},
@@ -131,8 +139,6 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 
 	bodystr := new(bytes.Buffer)
 	bodystr.ReadFrom(resp.Body)
-
-	fmt.Println("Full API response body:", bodystr.String())
 
 	// 以下の JSON をパースして text フィールドを抽出
 	// {
