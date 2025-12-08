@@ -115,11 +115,13 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 
 	jsonData, err := json.Marshal(requestBody)
 	if err != nil {
+		fmt.Println("Failed to marshal request body:", err)
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
+		fmt.Println("Failed to create request:", err)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -128,12 +130,14 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 
 	resp, err := c.http.Do(req)
 	if err != nil {
+		fmt.Println("Failed to send request:", err)
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		fmt.Println("API request failed with status", resp.StatusCode, "body:", string(body))
 		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
