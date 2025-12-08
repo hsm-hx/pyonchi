@@ -421,8 +421,10 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 			log.Fatalln(err)
 		}
 
+		s.ChannelMessageSend(i.ChannelID, "間違ってるときは https://www.notion.so/2b8531cb924680c39071c2090c53ff96?v=2b8531cb924680f0b01c000c5bf9d7ef から修正して")
+
 		// 🔚 会話終了
-		delete(expenseConversationState, i.ChannelID+"|"+i.Member.User.ID)
+		delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
 	}
 }
 
