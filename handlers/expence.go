@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -149,6 +150,11 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 
 	// Gemini API を使ってレシートデータを取得
 	receiptData, err := geminiClient.GetReceiptData(imagePath)
+	if errors.Is(err, gemini.ErrRateLimitExceeded) {
+		s.ChannelMessageSend(m.ChannelID, "⚠️ AI の利用制限超えちゃった")
+		delete(expenseReceiptConversationState, key)
+		return
+	}
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, "⚠️ レシートの解析に失敗したよ")
 		delete(expenseReceiptConversationState, key)

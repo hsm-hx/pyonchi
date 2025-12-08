@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -77,6 +78,8 @@ const geminiReceiptPrompt = `
 必ず上記のJSON形式で返してください。
 `
 
+var ErrRateLimitExceeded = errors.New("rate limit exceeded")
+
 func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) {
 	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
@@ -135,6 +138,10 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == 429 {
+		fmt.Println("Rate limit exceeded")
+		return nil, ErrRateLimitExceeded
+	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		fmt.Println("API request failed with status", resp.StatusCode, "body:", string(body))
