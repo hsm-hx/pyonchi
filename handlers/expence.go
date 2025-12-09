@@ -195,8 +195,16 @@ func RequestInputCategory(s *discordgo.Session, m *discordgo.MessageCreate) {
 								Value: "ぜいたくごはん",
 							},
 							{
-								Label: "消耗品費",
-								Value: "消耗品費",
+								Label: "日用品",
+								Value: "日用品",
+							},
+							{
+								Label: "住居費",
+								Value: "住居費",
+							},
+							{
+								Label: "旅行",
+								Value: "旅行",
 							},
 							{
 								Label: "その他",
