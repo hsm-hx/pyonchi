@@ -25,10 +25,11 @@ type ReceiptDataResponse struct {
 }
 
 type Item struct {
-	Name     string `json:"name"`
-	Category string `json:"category"`
-	Amount   int    `json:"amount"`
-	Date     string `json:"date"`
+	Name     string  `json:"name"`
+	Category string  `json:"category"`
+	Amount   int     `json:"amount"`
+	Tax      float32 `json:"tax"`
+	Date     string  `json:"date"`
 }
 
 func NewClient(apiKey string) *Client {
@@ -40,16 +41,17 @@ func NewClient(apiKey string) *Client {
 
 const geminiReceiptPrompt = `
 あなたは画像解析の専門家です。次の画像に基づいて、レシートから以下の情報を抽出し、JSON 形式で返してください。
-レシートに外税と記載のある場合、「アイテム名の頭に * マークが記されているもの」「アイテム名の頭に 外8 の記載があるもの」は 8%、記されていない場合は 10% の消費税を付加した税込価格を計算して返してください。
-レシートに内税と記載のある場合、表示されている価格は税込価格です。そのままの価格を返してください。
+レシートに外税と記載のある場合、「アイテム名の頭に * マークが記されているもの」「アイテム名の頭に 外8 の記載があるもの」は税率を 0.08、それらが記されていない場合は 0.10 としてください。
+レシートに内税と記載のある場合、すべてのアイテムの税率を 0.00 としてください。
 アイテムの下に割引額が記載されている場合、その割引額を該当するアイテムの価格から差し引いてください。
 
 返すべき情報の形式は以下の通りです:
 - 店舗名(merchant): レシートに記載されている店舗の名前
 - アイテム(items): 各商品の名前と価格のリスト
     - 名前(name): 文字列
-	- 価格(amount): 数値
+	- 税抜価格(amount): 数値
 	- カテゴリ(category): アイテム名と店舗名をもとに、以下のカテゴリから最も適切なものを選んでください: ぜいたくごはん, いつもごはん, 日用品, 住居費, 旅行, その他
+	- 税率(tax): 0.08 / 0.10
 - 日付(date): レシートの日付 (YYYY-MM-DD 形式)
 
 なお、カテゴリの判断は以下の基準に従ってください:
@@ -64,16 +66,16 @@ const geminiReceiptPrompt = `
 {
 	"merchant": "スーパーABC",
 	"items": [
-		{"name": "牛乳", "amount": 200, "category": "いつもごはん"},
-		{"name": "トイレットペーパー", "amount": 400, "category": "日用品"}
+		{"name": "牛乳", "amount": 200, "category": "いつもごはん", "tax": 0.08},
+		{"name": "トイレットペーパー", "amount": 400, "category": "日用品", "tax": 0.10}
 	],
 	"date": "2024-06-15"
 }
 {
 	"merchant": "カフェXYZ",
 	"items": [
-		{"name": "コーヒー", "amount": 300, "category": "ぜいたくごはん"},
-		{"name": "サンドイッチ", "amount": 500, "category": "ぜいたくごはん"}
+		{"name": "コーヒー", "amount": 300, "category": "ぜいたくごはん" "tax": 0.10},
+		{"name": "サンドイッチ", "amount": 500, "category": "ぜいたくごはん "tax": 0.10"}
 	],
 	"date": "2024-06-16"
 }

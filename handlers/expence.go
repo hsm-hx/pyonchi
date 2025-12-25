@@ -22,6 +22,7 @@ type ExpenceState struct {
 	Title    string
 	Category string
 	Amount   int
+	Tax      float32
 	People   int
 	Wallet   string
 }
@@ -371,7 +372,7 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 		for category, items := range categoryItems {
 			var totalAmount int
 			for _, item := range items {
-				totalAmount += item.Amount
+				totalAmount += int(float32(item.Amount) * (1 + item.Tax))
 			}
 			categoryTotals[category] = gemini.Item{
 				Name:     state.Merchant,
