@@ -3,6 +3,9 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
@@ -148,6 +151,14 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 		return
 	}
 	defer os.Remove(imagePath)
+
+	// 画像が横長の場合は縦長に回転させる
+	err = rotateImageIfLandscape(imagePath)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "⚠️ 画像の回転に失敗したよ")
+		delete(expenseReceiptConversationState, key)
+		return
+	}
 
 	// Gemini API を使ってレシートデータを取得
 	receiptData, err := geminiClient.GetReceiptData(imagePath)
@@ -502,4 +513,61 @@ func downloadImageToTempFile(url string) (string, error) {
 	}
 
 	return tmpFile.Name(), nil
+}
+
+// rotateImageIfLandscape は画像が横長の場合に90度回転させる
+func rotateImageIfLandscape(imagePath string) error {
+	// 画像ファイルを開く
+	file, err := os.Open(imagePath)
+	if err != nil {
+		return fmt.Errorf("failed to open image: %w", err)
+	}
+	defer file.Close()
+
+	// 画像をデコード
+	img, format, err := image.Decode(file)
+	if err != nil {
+		return fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// 横長でない場合は何もしない
+	if width <= height {
+		return nil
+	}
+
+	// 90度回転（時計回りに回転）
+	rotated := image.NewRGBA(image.Rect(0, 0, height, width))
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			rotated.Set(height-1-y, x, img.At(x, y))
+		}
+	}
+
+	// 回転した画像を元のファイルに上書き保存
+	outFile, err := os.Create(imagePath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outFile.Close()
+
+	// フォーマットに応じてエンコード
+	switch format {
+	case "jpeg", "jpg":
+		err = jpeg.Encode(outFile, rotated, &jpeg.Options{Quality: 95})
+	case "png":
+		err = png.Encode(outFile, rotated)
+	default:
+		// デフォルトはJPEGとして保存
+		err = jpeg.Encode(outFile, rotated, &jpeg.Options{Quality: 95})
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to encode image: %w", err)
+	}
+
+	return nil
 }
