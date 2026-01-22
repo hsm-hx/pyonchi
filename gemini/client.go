@@ -20,7 +20,8 @@ type Client struct {
 
 type ReceiptDataResponse struct {
 	Merchant string `json:"merchant"`
-	Items    []Item `json:"items"`
+	Category string `json:"category"`
+	Amount   int    `json:"amount"`
 	Date     string `json:"date"`
 }
 
@@ -47,11 +48,8 @@ const geminiReceiptPrompt = `
 
 返すべき情報の形式は以下の通りです:
 - 店舗名(merchant): レシートに記載されている店舗の名前
-- アイテム(items): 各商品の名前と価格のリスト
-    - 名前(name): 文字列
-	- 税抜価格(amount): 数値
-	- カテゴリ(category): アイテム名と店舗名をもとに、以下のカテゴリから最も適切なものを選んでください: ぜいたくごはん, いつもごはん, 日用品, 住居費, 旅行, その他
-	- 税率(tax): 0.08 / 0.10
+- カテゴリ(category): アイテム名と店舗名をもとに、以下のカテゴリから最も適切なものを選んでください: ぜいたくごはん, いつもごはん, 日用品, 住居費, 旅行, その他
+- 合計金額(amount): 全アイテムの合計金額 (割引後)
 - 日付(date): レシートの日付 (YYYY-MM-DD 形式)
 
 なお、カテゴリの判断は以下の基準に従ってください:
@@ -65,18 +63,14 @@ const geminiReceiptPrompt = `
 例:
 {
 	"merchant": "スーパーABC",
-	"items": [
-		{"name": "牛乳", "amount": 200, "category": "いつもごはん", "tax": 0.08},
-		{"name": "トイレットペーパー", "amount": 400, "category": "日用品", "tax": 0.10}
-	],
+	"category": "いつもごはん",
+	"amount": 1500,
 	"date": "2024-06-15"
 }
 {
 	"merchant": "カフェXYZ",
-	"items": [
-		{"name": "コーヒー", "amount": 300, "category": "ぜいたくごはん" "tax": 0.10},
-		{"name": "サンドイッチ", "amount": 500, "category": "ぜいたくごはん "tax": 0.10"}
-	],
+	"category": "ぜいたくごはん",
+	"amount": 800,
 	"date": "2024-06-16"
 }
 
@@ -163,7 +157,7 @@ func (c *Client) GetReceiptData(imagePath string) (*ReceiptDataResponse, error) 
 	//       "content": {
 	//         "parts": [
 	//           {
-	//             "text": "```json\n{\n\t\"merchant\": \"root C\",\n\t\"items\": [\n\t\t{\"name\": \"ブラジル セルタオ/HOT\", \"amount\": 500, \"category\": \"ぜいたくごはん\"}\n\t],\n\t\"date\": \"2025-11-29\"\n}\n```"
+	//             "text": "```json\n{\n\t\"merchant\": \"root C\",\n\t\"category\": \"ぜいたくごはん\",\n\t\"amount\": 500,\n\t\"date\": \"2025-11-29\"\n}\n```"
 	//           }
 	//         ],
 	//         "role": "model"

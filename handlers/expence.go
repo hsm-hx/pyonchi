@@ -31,7 +31,8 @@ type ExpenceState struct {
 }
 type ReceiptData struct {
 	Merchant string
-	Items    []gemini.Item
+	Category string
+	Amount   int
 	Date     string
 }
 
@@ -134,7 +135,8 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 	if !ok {
 		expenseReceiptConversationState[key] = &ReceiptData{
 			Merchant: "",
-			Items:    nil,
+			Category: "",
+			Amount:   0,
 			Date:     "",
 		}
 	}
@@ -177,7 +179,8 @@ func ExpenseReceiptHandleOngoing(s *discordgo.Session, m *discordgo.MessageCreat
 	// 解析結果をもとに map に保存
 	expenseReceiptConversationState[key] = &ReceiptData{
 		Merchant: receiptData.Merchant,
-		Items:    receiptData.Items,
+		Category: receiptData.Category,
+		Amount:   receiptData.Amount,
 		Date:     receiptData.Date,
 	}
 
@@ -372,60 +375,33 @@ func ReceiptWalletInteractionHandler(s *discordgo.Session, i *discordgo.Interact
 		fmt.Println(i.ChannelID, i.Member.User.ID)
 		fmt.Println(expenseReceiptConversationState)
 
-		// レシートの各アイテムをカテゴリごとに集計
-		var categoryItems = make(map[string][]gemini.Item)
-		for _, item := range state.Items {
-			categoryItems[item.Category] = append(categoryItems[item.Category], item)
-		}
-
-		// カテゴリごとに記録単位を作成
-		var categoryTotals = make(map[string]gemini.Item)
-		for category, items := range categoryItems {
-			var totalAmount int
-			for _, item := range items {
-				totalAmount += int(float32(item.Amount) * (1 + item.Tax))
-			}
-			categoryTotals[category] = gemini.Item{
-				Name:     state.Merchant,
-				Amount:   totalAmount,
-				Category: category,
-			}
-		}
-
 		var msgs []string
-		// 各カテゴリごとに Notion に記録
-		for _, item := range categoryTotals {
-			title := item.Name
-			amount := int(item.Amount)
-			people := 1
-			category := item.Category
 
-			dateTime, err := time.Parse("2006-01-02", state.Date)
-			if err != nil {
-				s.ChannelMessageSend(i.ChannelID, "⚠️ 日付の解析に失敗したよ")
-				delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
-				return
-			}
-
-			// Notion に書き込み
-			err = client.CreateExpenseRecord(title, category, amount, people, wallet, dateTime)
-
-			if err != nil {
-				s.ChannelMessageSend(i.ChannelID, "⚠️ Notion に記録できなかった")
-				delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
-				return
-			}
-
-			budgets := getBudgetText(s, i, category)
-
-			msgs = append(msgs, "🍽 家計簿つけたよ\n"+
-				"タイトル: "+title+"\n"+
-				"一人あたり: "+strconv.Itoa(amount)+"円\n"+
-				"人数: "+strconv.Itoa(people)+"人\n"+
-				"合計: "+strconv.Itoa(amount*people)+"円\n"+
-				"財布: "+wallet+"\n\n"+
-				budgets)
+		dateTime, err := time.Parse("2006-01-02", state.Date)
+		if err != nil {
+			s.ChannelMessageSend(i.ChannelID, "⚠️ 日付の解析に失敗したよ")
+			delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
+			return
 		}
+
+		// Notion に書き込み
+		err = client.CreateExpenseRecord(state.Merchant, state.Category, state.Amount, 1, wallet, dateTime)
+
+		if err != nil {
+			s.ChannelMessageSend(i.ChannelID, "⚠️ Notion に記録できなかった")
+			delete(expenseReceiptConversationState, i.ChannelID+"|"+i.Member.User.ID)
+			return
+		}
+
+		budgets := getBudgetText(s, i, state.Category)
+
+		msgs = append(msgs, "🍽 家計簿つけたよ\n"+
+			"タイトル: "+state.Merchant+"\n"+
+			"一人あたり: "+strconv.Itoa(state.Amount)+"円\n"+
+			"人数: "+strconv.Itoa(1)+"人\n"+
+			"合計: "+strconv.Itoa(state.Amount*1)+"円\n"+
+			"財布: "+wallet+"\n\n"+
+			budgets)
 
 		// 結果を Discord に送信
 		msg := strings.Join(msgs, "\n")
